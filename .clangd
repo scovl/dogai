@@ -1,0 +1,10 @@
+CompileFlags:
+  Add: 
+    - -Iinclude
+    - -ID:/softwares/opencv/build/include
+    - -ID:/softwares/onnxruntime/onnxruntime-win-x64-1.22.1/include
+    - -std=c++17
+    - -DWIN32
+    - -D_WIN32
+    - -DUNICODE
+    - -D_UNICODE 
