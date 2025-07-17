@@ -1,4 +1,5 @@
 #include "windows_graphics_capture.hpp"
+#include <algorithm>
 
 WindowsGraphicsCapture::WindowsGraphicsCapture() {
     initialize_d3d();
@@ -10,6 +11,39 @@ WindowsGraphicsCapture::~WindowsGraphicsCapture() {
 
 bool WindowsGraphicsCapture::is_initialized() const {
     return initialized;
+}
+
+cv::Size WindowsGraphicsCapture::get_screen_size() const {
+    return screen_size;
+}
+
+cv::Point WindowsGraphicsCapture::get_screen_center() const {
+    return cv::Point(screen_size.width / 2, screen_size.height / 2);
+}
+
+cv::Rect WindowsGraphicsCapture::calculate_fov_region(int fov_width, int fov_height) {
+    cv::Point center = get_screen_center();
+    int x = center.x - fov_width / 2;
+    int y = center.y - fov_height / 2;
+    
+    // Ensure FOV doesn't go outside screen bounds
+    x = (x > 0) ? x : 0;
+    y = (y > 0) ? y : 0;
+    
+    int actual_width = (fov_width < (screen_size.width - x)) ? fov_width : (screen_size.width - x);
+    int actual_height = (fov_height < (screen_size.height - y)) ? fov_height : (screen_size.height - y);
+    
+    return cv::Rect(x, y, actual_width, actual_height);
+}
+
+cv::Mat WindowsGraphicsCapture::capture_fov(int fov_width, int fov_height) {
+    cv::Mat full_screen = capture_screen();
+    if (full_screen.empty()) {
+        return cv::Mat();
+    }
+    
+    cv::Rect fov_region = calculate_fov_region(fov_width, fov_height);
+    return full_screen(fov_region);
 }
 
 cv::Mat WindowsGraphicsCapture::capture_screen() {
@@ -58,6 +92,12 @@ cv::Mat WindowsGraphicsCapture::capture_screen() {
     // Get texture description
     D3D11_TEXTURE2D_DESC texture_desc;
     desktop_texture->GetDesc(&texture_desc);
+    
+    // Update screen size if not set
+    if (screen_size.width == 0 || screen_size.height == 0) {
+        screen_size = cv::Size(texture_desc.Width, texture_desc.Height);
+        logger.info("[WGC][INFO] Screen size detected: " + std::to_string(screen_size.width) + "x" + std::to_string(screen_size.height));
+    }
     
     // Create staging texture for CPU access
     D3D11_TEXTURE2D_DESC staging_desc = texture_desc;
