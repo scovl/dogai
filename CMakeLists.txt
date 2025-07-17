@@ -87,6 +87,11 @@ include_directories(${CMAKE_SOURCE_DIR}/include)
 add_executable(video_object_detection 
     src/main.cpp
     src/yolov8_detector.cpp
+    src/yolov8_model.cpp
+    src/yolov8_preprocessor.cpp
+    src/yolov8_postprocessor.cpp
+    src/yolov8_visualizer.cpp
+    src/fov_processor.cpp
     src/windows_graphics_capture.cpp
 )
 
