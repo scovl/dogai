@@ -1,7 +1,7 @@
 #include "yolov8_detector.hpp"
 
 YOLOv8::YOLOv8(const std::string& model_path, float conf_thres, float iou_thres) 
-    : conf_threshold(conf_thres), iou_threshold(iou_thres), config() {
+    : conf_threshold(conf_thres), iou_threshold(iou_thres), config("blood.cfg") {
     
     // Load configuration from file
     load_config_from_file();
@@ -105,6 +105,15 @@ void YOLOv8::initialize_model(const std::string& model_path) {
         Ort::SessionOptions session_options;
         session_options.SetIntraOpNumThreads(1);
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+        
+        // CPU Optimization for AMD RX 7600 XT
+        // Using CPU with maximum optimizations for high FPS
+        session_options.SetIntraOpNumThreads(8); // Use more CPU threads
+        session_options.SetInterOpNumThreads(4); // Parallel execution
+        session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+        
+        logger.info("[YOLOv8][INFO] CPU optimization enabled for high FPS");
+        logger.info("[YOLOv8][INFO] Using 8 threads for maximum performance");
         
         // Fix: use wstring for model path
         std::wstring wmodel_path(model_path.begin(), model_path.end());
