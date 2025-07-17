@@ -250,8 +250,46 @@ std::vector<YOLOv8::Detection> YOLOv8::process_output(const std::vector<Ort::Val
         return detections;
     }
     
-    // Option 1: [1, N, 4+num_classes] - default YOLOv8 format
-    if (output_shape.size() == 3) {
+    // Suporte ao formato [1, 5, 8400] do blood.onnx
+    if (output_shape.size() == 3 && output_shape[1] == 5) {
+        int num_boxes = static_cast<int>(output_shape[2]);
+        int img_width = original_size.width;
+        int img_height = original_size.height;
+        int input_w = input_width;
+        int input_h = input_height;
+
+        for (int i = 0; i < num_boxes; ++i) {
+            float x = output_data[0 * num_boxes + i];
+            float y = output_data[1 * num_boxes + i];
+            float w = output_data[2 * num_boxes + i];
+            float h = output_data[3 * num_boxes + i];
+            float score = output_data[4 * num_boxes + i];
+
+            if (score > conf_threshold) {
+                float x_scaled = x / input_w * img_width;
+                float y_scaled = y / input_h * img_height;
+                float w_scaled = w / input_w * img_width;
+                float h_scaled = h / input_h * img_height;
+                float x1 = x_scaled - w_scaled / 2.0f;
+                float y1 = y_scaled - h_scaled / 2.0f;
+                float x2 = x_scaled + w_scaled / 2.0f;
+                float y2 = y_scaled + h_scaled / 2.0f;
+                x1 = std::max(0.0f, std::min(x1, static_cast<float>(img_width-1)));
+                y1 = std::max(0.0f, std::min(y1, static_cast<float>(img_height-1)));
+                x2 = std::max(0.0f, std::min(x2, static_cast<float>(img_width-1)));
+                y2 = std::max(0.0f, std::min(y2, static_cast<float>(img_height-1)));
+                Detection det;
+                det.box = cv::Rect(cv::Point(x1, y1), cv::Point(x2, y2));
+                det.score = score;
+                det.class_id = 0;
+                detections.push_back(det);
+            }
+        }
+        // Aplica NMS e retorna
+        return non_max_suppression(detections);
+    }
+    // Option 2: [1, N, 4+num_classes] - default YOLOv8 format
+    else if (output_shape.size() == 3) {
         int num_boxes = static_cast<int>(output_shape[2]); // 8400
         int num_classes = static_cast<int>(output_shape[1]) - 4; // 1 (se blood.onnx for custom)
         int img_width = original_size.width;
