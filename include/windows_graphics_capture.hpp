@@ -33,6 +33,7 @@ private:
     IDXGIOutput1* dxgi_output1 = nullptr;
     
     bool initialized = false;
+    cv::Size screen_size;
 
 public:
     WindowsGraphicsCapture();
@@ -40,8 +41,12 @@ public:
     
     bool is_initialized() const;
     cv::Mat capture_screen();
+    cv::Mat capture_fov(int fov_width = 400, int fov_height = 400);
+    cv::Size get_screen_size() const;
+    cv::Point get_screen_center() const;
 
 private:
     bool initialize_d3d();
     void cleanup();
+    cv::Rect calculate_fov_region(int fov_width, int fov_height);
 }; 
