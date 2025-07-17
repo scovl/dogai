@@ -21,6 +21,11 @@ private:
     float iou_threshold = 0.2f;
     ConfigManager config;
     
+    // FOV configuration
+    int fov_width = 400;
+    int fov_height = 400;
+    cv::Size fov_size;
+    
     std::vector<std::string> class_names = {
         "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
         "fire hydrant", "stop sign", "parking meter", "bench", "bird", "cat", "dog", "horse", "sheep", "cow",
@@ -39,6 +44,11 @@ private:
         cv::Rect box;
         float score;
         int class_id;
+        
+        // FOV relative coordinates
+        cv::Point2f fov_center;  // Center point relative to FOV (0-1)
+        float fov_distance;      // Distance from FOV center (0-1)
+        float fov_angle;         // Angle from FOV center in radians
     };
 
 public:
@@ -47,6 +57,15 @@ public:
     
     std::vector<Detection> detect_objects(const cv::Mat& image);
     cv::Mat draw_detections(const cv::Mat& image, const std::vector<Detection>& detections);
+    
+    // FOV specific methods
+    void set_fov_size(int width, int height);
+    cv::Size get_fov_size() const;
+    std::vector<Detection> detect_objects_fov(const cv::Mat& fov_image);
+    cv::Mat draw_fov_detections(const cv::Mat& fov_image, const std::vector<Detection>& detections);
+    cv::Point2f calculate_fov_center(const cv::Rect& box) const;
+    float calculate_fov_distance(const cv::Point2f& center) const;
+    float calculate_fov_angle(const cv::Point2f& center) const;
 
 private:
     void load_config_from_file();
@@ -56,4 +75,5 @@ private:
     std::vector<Detection> process_output(const std::vector<Ort::Value>& outputs, const cv::Size& original_size);
     std::vector<Detection> non_max_suppression(const std::vector<Detection>& detections);
     float calculate_iou(const cv::Rect& box1, const cv::Rect& box2);
+    void calculate_fov_metrics(Detection& detection);
 }; 
