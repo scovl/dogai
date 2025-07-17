@@ -413,4 +413,90 @@ float YOLOv8::calculate_iou(const cv::Rect& box1, const cv::Rect& box2) {
     int union_area = area1 + area2 - intersection;
     
     return static_cast<float>(intersection) / union_area;
+}
+
+// FOV specific methods
+void YOLOv8::set_fov_size(int width, int height) {
+    fov_width = width;
+    fov_height = height;
+    fov_size = cv::Size(width, height);
+    logger.info("[YOLOv8][INFO] FOV size set to: " + std::to_string(width) + "x" + std::to_string(height));
+}
+
+cv::Size YOLOv8::get_fov_size() const {
+    return fov_size;
+}
+
+std::vector<YOLOv8::Detection> YOLOv8::detect_objects_fov(const cv::Mat& fov_image) {
+    if (fov_image.empty()) {
+        logger.error("[YOLOv8][ERROR] FOV image is empty!");
+        return std::vector<Detection>();
+    }
+    
+    // Detect objects in FOV
+    std::vector<Detection> detections = detect_objects(fov_image);
+    
+    // Calculate FOV metrics for each detection
+    for (auto& detection : detections) {
+        calculate_fov_metrics(detection);
+    }
+    
+    return detections;
+}
+
+cv::Mat YOLOv8::draw_fov_detections(const cv::Mat& fov_image, const std::vector<Detection>& detections) {
+    cv::Mat result = fov_image.clone();
+    
+    // Draw FOV center crosshair
+    cv::Point fov_center(fov_width / 2, fov_height / 2);
+    cv::line(result, cv::Point(fov_center.x - 10, fov_center.y), cv::Point(fov_center.x + 10, fov_center.y), cv::Scalar(0, 255, 0), 2);
+    cv::line(result, cv::Point(fov_center.x, fov_center.y - 10), cv::Point(fov_center.x, fov_center.y + 10), cv::Scalar(0, 255, 0), 2);
+    
+    // Draw FOV border
+    cv::rectangle(result, cv::Rect(0, 0, fov_width, fov_height), cv::Scalar(0, 255, 0), 2);
+    
+    // Draw detections with FOV information
+    for (const auto& det : detections) {
+        // Draw bounding box
+        cv::rectangle(result, det.box, cv::Scalar(0, 0, 255), 2);
+        
+        // Draw line from FOV center to detection center
+        cv::Point det_center(det.box.x + det.box.width / 2, det.box.y + det.box.height / 2);
+        cv::line(result, fov_center, det_center, cv::Scalar(255, 0, 0), 1);
+        
+        // Draw FOV metrics
+        std::string info = "D:" + std::to_string(static_cast<int>(det.fov_distance * 100)) + 
+                          " A:" + std::to_string(static_cast<int>(det.fov_angle * 180 / 3.14159f));
+        cv::putText(result, info, cv::Point(det.box.x, det.box.y - 5), 
+                   cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);
+    }
+    
+    return result;
+}
+
+cv::Point2f YOLOv8::calculate_fov_center(const cv::Rect& box) const {
+    cv::Point2f center;
+    center.x = (box.x + box.width / 2.0f) / fov_width;
+    center.y = (box.y + box.height / 2.0f) / fov_height;
+    return center;
+}
+
+float YOLOv8::calculate_fov_distance(const cv::Point2f& center) const {
+    // Calculate distance from FOV center (0,0) to detection center
+    float dx = center.x - 0.5f;  // Center of FOV is (0.5, 0.5)
+    float dy = center.y - 0.5f;
+    return std::sqrt(dx * dx + dy * dy);
+}
+
+float YOLOv8::calculate_fov_angle(const cv::Point2f& center) const {
+    // Calculate angle from FOV center to detection center
+    float dx = center.x - 0.5f;
+    float dy = center.y - 0.5f;
+    return std::atan2(dy, dx);
+}
+
+void YOLOv8::calculate_fov_metrics(Detection& detection) {
+    detection.fov_center = calculate_fov_center(detection.box);
+    detection.fov_distance = calculate_fov_distance(detection.fov_center);
+    detection.fov_angle = calculate_fov_angle(detection.fov_center);
 } 
