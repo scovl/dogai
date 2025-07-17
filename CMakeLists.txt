@@ -7,6 +7,18 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# GPU Optimization Options
+option(USE_GPU "Enable GPU acceleration" ON)
+option(GPU_PROVIDER "GPU provider (DirectML/CUDA)" "DirectML")
+option(OPTIMIZE_FOR_AMD "Optimize for AMD GPUs" ON)
+
+# Performance optimizations
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /GL /arch:AVX2")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /fp:fast /ffast-math")
+    message(STATUS "Release build optimizations enabled")
+endif()
+
 # Try to find OpenCV with multiple methods
 find_package(OpenCV QUIET)
 if(NOT OpenCV_FOUND)
@@ -77,6 +89,25 @@ add_executable(video_object_detection
     src/yolov8_detector.cpp
     src/windows_graphics_capture.cpp
 )
+
+# Add GPU optimization definitions
+if(USE_GPU)
+    target_compile_definitions(video_object_detection PRIVATE
+        USE_GPU=1
+        GPU_PROVIDER="${GPU_PROVIDER}"
+    )
+    
+    if(OPTIMIZE_FOR_AMD)
+        target_compile_definitions(video_object_detection PRIVATE
+            OPTIMIZE_FOR_AMD=1
+        )
+        message(STATUS "AMD GPU optimizations enabled")
+    endif()
+    
+    message(STATUS "GPU acceleration enabled with provider: ${GPU_PROVIDER}")
+else()
+    message(STATUS "GPU acceleration disabled - using CPU only")
+endif()
 
 # Link libraries
 target_link_libraries(video_object_detection ${OpenCV_LIBS})
