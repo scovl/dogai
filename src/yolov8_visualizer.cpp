@@ -8,9 +8,9 @@ YOLOv8Visualizer::YOLOv8Visualizer(const std::string& config_file)
 
 void YOLOv8Visualizer::initialize_colors() {
     // Initialize colors
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dis(0.0f, 255.0f);
+    auto rd = std::random_device();
+    auto gen = std::mt19937(rd());
+    auto dis = std::uniform_real_distribution<float>(0.0f, 255.0f);
     
     for (size_t i = 0; i < class_names.size(); ++i) {
         colors.push_back(cv::Scalar(dis(gen), dis(gen), dis(gen)));
@@ -18,21 +18,21 @@ void YOLOv8Visualizer::initialize_colors() {
 }
 
 cv::Mat YOLOv8Visualizer::draw_detections(const cv::Mat& image, const std::vector<Detection>& detections) {
-    cv::Mat result = image.clone();
+    auto result = image.clone();
     
     // Load display configuration
-    std::vector<int> box_color = config.get_int_array("Display", "box_color", {0, 0, 255});
-    std::vector<int> text_color = config.get_int_array("Display", "text_color", {255, 255, 255});
-    int box_thickness = config.get_int("Display", "box_thickness", 2);
-    float text_scale = config.get_float("Display", "text_scale", 0.5f);
-    bool show_confidence = config.get_string("Display", "show_confidence", "true") == "true";
-    bool show_class_name = config.get_string("Display", "show_class_name", "true") == "true";
+    auto box_color = config.get_int_array("Display", "box_color", {0, 0, 255});
+    auto text_color = config.get_int_array("Display", "text_color", {255, 255, 255});
+    auto box_thickness = config.get_int("Display", "box_thickness", 2);
+    auto text_scale = config.get_float("Display", "text_scale", 0.5f);
+    auto show_confidence = config.get_string("Display", "show_confidence", "true") == "true";
+    auto show_class_name = config.get_string("Display", "show_class_name", "true") == "true";
     
     for (size_t i = 0; i < detections.size(); ++i) {
         const auto& det = detections[i];
         
         // Use configured color or default color
-        cv::Scalar color;
+        auto color = cv::Scalar();
         if (box_color.size() >= 3) {
             color = cv::Scalar(box_color[0], box_color[1], box_color[2]);
         } else {
@@ -43,7 +43,7 @@ cv::Mat YOLOv8Visualizer::draw_detections(const cv::Mat& image, const std::vecto
         cv::rectangle(result, det.box, color, box_thickness);
         
         // Prepare label
-        std::string label;
+        auto label = std::string();
         if (show_class_name) {
             if (det.class_id < class_names.size()) {
                 label = class_names[det.class_id];
@@ -57,8 +57,8 @@ cv::Mat YOLOv8Visualizer::draw_detections(const cv::Mat& image, const std::vecto
         }
         
         if (!label.empty()) {
-            int baseline = 0;
-            cv::Size text_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, text_scale, 1, &baseline);
+            auto baseline = 0;
+            auto text_size = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, text_scale, 1, &baseline);
             
             // Background of text
             cv::rectangle(result, 
@@ -67,7 +67,7 @@ cv::Mat YOLOv8Visualizer::draw_detections(const cv::Mat& image, const std::vecto
                          color, -1);
             
             // Texto
-            cv::Scalar text_color_scalar;
+            auto text_color_scalar = cv::Scalar();
             if (text_color.size() >= 3) {
                 text_color_scalar = cv::Scalar(text_color[0], text_color[1], text_color[2]);
             } else {
@@ -84,10 +84,10 @@ cv::Mat YOLOv8Visualizer::draw_detections(const cv::Mat& image, const std::vecto
 }
 
 cv::Mat YOLOv8Visualizer::draw_fov_detections(const cv::Mat& fov_image, const std::vector<Detection>& detections, int fov_width, int fov_height) {
-    cv::Mat result = fov_image.clone();
+    auto result = fov_image.clone();
     
     // Draw FOV center crosshair
-    cv::Point fov_center(fov_width / 2, fov_height / 2);
+    auto fov_center = cv::Point(fov_width / 2, fov_height / 2);
     cv::line(result, cv::Point(fov_center.x - 10, fov_center.y), cv::Point(fov_center.x + 10, fov_center.y), cv::Scalar(0, 255, 0), 2);
     cv::line(result, cv::Point(fov_center.x, fov_center.y - 10), cv::Point(fov_center.x, fov_center.y + 10), cv::Scalar(0, 255, 0), 2);
     
@@ -100,11 +100,11 @@ cv::Mat YOLOv8Visualizer::draw_fov_detections(const cv::Mat& fov_image, const st
         cv::rectangle(result, det.box, cv::Scalar(0, 0, 255), 2);
         
         // Draw line from FOV center to detection center
-        cv::Point det_center(det.box.x + det.box.width / 2, det.box.y + det.box.height / 2);
+        auto det_center = cv::Point(det.box.x + det.box.width / 2, det.box.y + det.box.height / 2);
         cv::line(result, fov_center, det_center, cv::Scalar(255, 0, 0), 1);
         
         // Draw FOV metrics
-        std::string info = "D:" + std::to_string(static_cast<int>(det.fov_distance * 100)) + 
+        auto info = "D:" + std::to_string(static_cast<int>(det.fov_distance * 100)) + 
                           " A:" + std::to_string(static_cast<int>(det.fov_angle * 180 / 3.14159f));
         cv::putText(result, info, cv::Point(det.box.x, det.box.y - 5), 
                    cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(255, 255, 255), 1);

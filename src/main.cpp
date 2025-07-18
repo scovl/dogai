@@ -24,25 +24,25 @@ int main() {
     }
     
     // Get screen information
-    cv::Size screen_size = capture.get_screen_size();
-    cv::Point screen_center = capture.get_screen_center();
+    auto screen_size = capture.get_screen_size();
+    auto screen_center = capture.get_screen_center();
     logger.info("[MAIN][INFO] Screen size: " + std::to_string(screen_size.width) + "x" + std::to_string(screen_size.height));
     logger.info("[MAIN][INFO] Screen center: (" + std::to_string(screen_center.x) + ", " + std::to_string(screen_center.y) + ")");
     
     // Load unified configuration
-    ConfigManager config("blood.cfg");
+    auto config = ConfigManager("blood.cfg");
     
     // Check performance mode
-    std::string perf_mode = config.get_string("Performance", "performance_mode", "normal");
+    auto perf_mode = config.get_string("Performance", "performance_mode", "normal");
     if (perf_mode == "maximum") {
         logger.info("[MAIN][INFO] Maximum performance mode enabled - using ultra high FPS settings");
     }
     
     // Initialize YOLOv8 model for Bloodstrike
-    std::string model_path = "models/blood.onnx";
+    auto model_path = "models/blood.onnx";
     
     try {
-        YOLOv8 yolov8_detector(model_path, 0.2f, 0.2f);
+        auto yolov8_detector = YOLOv8(model_path, 0.2f, 0.2f);
         
         // Configure FOV for Bloodstrike detection
         const int FOV_WIDTH = 400;
@@ -67,11 +67,11 @@ int main() {
         auto fps_start_time = last_frame_time;
         
         // FPS measurement variables
-        std::vector<double> fps_history;
-        double current_fps = 0.0;
-        double average_fps = 0.0;
-        int fps_measurement_interval = config.get_int("Performance", "fps_measurement_interval", 60);
-        bool enable_fps_logging = config.get_string("Performance", "enable_fps_logging", "true") == "true";
+        auto fps_history = std::vector<double>();
+        auto current_fps = 0.0;
+        auto average_fps = 0.0;
+        auto fps_measurement_interval = config.get_int("Performance", "fps_measurement_interval", 60);
+        auto enable_fps_logging = config.get_string("Performance", "enable_fps_logging", "true") == "true";
         
         logger.info("[MAIN][INFO] Target FPS: " + std::to_string(TARGET_FPS));
         logger.info("[MAIN][INFO] FPS measurement enabled - logging every " + std::to_string(fps_measurement_interval) + " frames");
@@ -87,7 +87,7 @@ int main() {
             }
             
             // Capture FOV region (400x400 centered on screen)
-            cv::Mat fov_frame = capture.capture_fov(FOV_WIDTH, FOV_HEIGHT);
+            auto fov_frame = capture.capture_fov(FOV_WIDTH, FOV_HEIGHT);
             
             if (fov_frame.empty()) {
                 logger.error("[MAIN][ERROR] Failed to capture FOV!");
@@ -98,11 +98,11 @@ int main() {
             auto fov_detections = yolov8_detector.detect_objects_fov(fov_frame);
             
             // Draw FOV detections with crosshair and metrics
-            cv::Mat fov_result = yolov8_detector.draw_fov_detections(fov_frame, fov_detections);
+            auto fov_result = yolov8_detector.draw_fov_detections(fov_frame, fov_detections);
             
             // Add FPS text to the image
-            cv::Mat display_image = fov_result.clone();
-            std::string fps_text = "FPS: " + std::to_string(static_cast<int>(current_fps)) + 
+            auto display_image = fov_result.clone();
+            auto fps_text = "FPS: " + std::to_string(static_cast<int>(current_fps)) + 
                                   " | Avg: " + std::to_string(static_cast<int>(average_fps)) + 
                                   " | Target: " + std::to_string(TARGET_FPS);
             
@@ -188,8 +188,8 @@ int main() {
             logger.info("[MAIN][FINAL] Target FPS: " + std::to_string(TARGET_FPS));
             
             // Calculate min/max FPS
-            double min_fps = *std::min_element(fps_history.begin(), fps_history.end());
-            double max_fps = *std::max_element(fps_history.begin(), fps_history.end());
+            auto min_fps = *std::min_element(fps_history.begin(), fps_history.end());
+            auto max_fps = *std::max_element(fps_history.begin(), fps_history.end());
             logger.info("[MAIN][FINAL] Min FPS: " + std::to_string(static_cast<int>(min_fps)));
             logger.info("[MAIN][FINAL] Max FPS: " + std::to_string(static_cast<int>(max_fps)));
             logger.info("[MAIN][FINAL] Performance: " + std::string(average_fps >= TARGET_FPS * 0.9 ? "EXCELLENT" : 

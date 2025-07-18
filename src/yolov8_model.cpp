@@ -24,7 +24,7 @@ void YOLOv8Model::initialize_model(const std::string& model_path) {
     try {
         env = Ort::Env(ORT_LOGGING_LEVEL_WARNING, "YOLOv8");
         
-        Ort::SessionOptions session_options;
+        auto session_options = Ort::SessionOptions();
         session_options.SetIntraOpNumThreads(1);
         session_options.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
         
@@ -38,41 +38,41 @@ void YOLOv8Model::initialize_model(const std::string& model_path) {
         logger.info("[YOLOv8Model][INFO] Using 8 threads for maximum performance");
         
         // Fix: use wstring for model path
-        std::wstring wmodel_path(model_path.begin(), model_path.end());
+        auto wmodel_path = std::wstring(model_path.begin(), model_path.end());
         session = Ort::Session(env, wmodel_path.c_str(), session_options);
         
         // Get input and output names (fixed for new API)
-        Ort::AllocatorWithDefaultOptions allocator;
+        auto allocator = Ort::AllocatorWithDefaultOptions();
         
         // Get input names
-        size_t num_inputs = session.GetInputCount();
+        auto num_inputs = session.GetInputCount();
         
         for (size_t i = 0; i < num_inputs; ++i) {
             auto input_name_alloc = session.GetInputNameAllocated(i, allocator);
-            std::string input_name = input_name_alloc.get();
+            auto input_name = input_name_alloc.get();
             input_names.push_back(input_name);
         }
         
         // Get output names
-        size_t num_outputs = session.GetOutputCount();
+        auto num_outputs = session.GetOutputCount();
         
         for (size_t i = 0; i < num_outputs; ++i) {
             auto output_name_alloc = session.GetOutputNameAllocated(i, allocator);
-            std::string output_name = output_name_alloc.get();
+            auto output_name = output_name_alloc.get();
             output_names.push_back(output_name);
         }
         
         // Log detailed input of the model (equal to Python)
         for (size_t i = 0; i < num_inputs; ++i) {
             auto input_name_alloc = session.GetInputNameAllocated(i, allocator);
-            std::string input_name = input_name_alloc.get();
+            auto input_name = input_name_alloc.get();
             
-            Ort::TypeInfo type_info = session.GetInputTypeInfo(i);
+            auto type_info = session.GetInputTypeInfo(i);
             auto tensor_info = type_info.GetTensorTypeAndShapeInfo();
-            ONNXTensorElementDataType type = tensor_info.GetElementType();
-            std::vector<int64_t> input_dims = tensor_info.GetShape();
+            auto type = tensor_info.GetElementType();
+            auto input_dims = tensor_info.GetShape();
             
-            std::string type_str;
+            auto type_str = std::string();
             switch (type) {
                 case ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT: type_str = "float32"; break;
                 case ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8: type_str = "uint8"; break;
@@ -80,7 +80,7 @@ void YOLOv8Model::initialize_model(const std::string& model_path) {
                 default: type_str = "unknown"; break;
             }
             
-            std::string dims_str;
+            auto dims_str = std::string();
             for (size_t j = 0; j < input_dims.size(); ++j) {
                 dims_str += std::to_string(input_dims[j]);
                 if (j + 1 < input_dims.size()) dims_str += ", ";
@@ -99,17 +99,17 @@ std::vector<Ort::Value> YOLOv8Model::run_inference(const std::vector<float>& inp
             logger.error("[YOLOv8Model][ERROR] Input or output names are empty!");
             throw std::runtime_error("Input or output names are empty");
         }
-        std::vector<const char*> input_names_char(input_names.size());
-        std::vector<const char*> output_names_char(output_names.size());
+        auto input_names_char = std::vector<const char*>(input_names.size());
+        auto output_names_char = std::vector<const char*>(output_names.size());
         for (size_t i = 0; i < input_names.size(); ++i) {
             input_names_char[i] = input_names[i].c_str();
         }
         for (size_t i = 0; i < output_names.size(); ++i) {
             output_names_char[i] = output_names[i].c_str();
         }
-        std::vector<Ort::Value> input_tensors;
+        auto input_tensors = std::vector<Ort::Value>();
         try {
-            std::vector<int64_t> input_shape = {1, 3, input_height, input_width};
+            auto input_shape = std::vector<int64_t>{1, 3, input_height, input_width};
             input_tensors.push_back(Ort::Value::CreateTensor<float>(
                 Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault),
                 const_cast<float*>(input_tensor.data()),

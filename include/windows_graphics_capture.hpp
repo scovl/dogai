@@ -22,6 +22,11 @@ static const GUID IID_IDXGIOutput1_ = { 0x00cddea8, 0x939b, 0x4b83, { 0xa3, 0x40
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "windowsapp.lib")
 
+// Define DXGI error codes that might not be available in older SDK versions
+#ifndef DXGI_ERROR_ACCESS_LOST_ERROR
+#define DXGI_ERROR_ACCESS_LOST_ERROR 0x887A0007
+#endif
+
 class WindowsGraphicsCapture {
 private:
     ID3D11Device* d3d_device = nullptr;
@@ -49,4 +54,6 @@ private:
     bool initialize_d3d();
     void cleanup();
     cv::Rect calculate_fov_region(int fov_width, int fov_height);
+    bool check_permissions();
+    bool reinitialize_capture();
 }; 
