@@ -16,22 +16,22 @@ std::vector<float> YOLOv8Preprocessor::prepare_input(const cv::Mat& image) {
     }
     
     // 1. Convert BGR to RGB
-    cv::Mat rgb_img;
+    auto rgb_img = cv::Mat();
     cv::cvtColor(image, rgb_img, cv::COLOR_BGR2RGB);
     
     // 2. Resize
-    cv::Mat resized;
+    auto resized = cv::Mat();
     cv::resize(rgb_img, resized, cv::Size(input_width, input_height));
     
     // 3. Normalize to [0,1]
-    cv::Mat float_img;
+    auto float_img = cv::Mat();
     resized.convertTo(float_img, CV_32F, 1.0/255.0);
     
     // 4. Transpose to NCHW
-    std::vector<cv::Mat> chw(3);
+    auto chw = std::vector<cv::Mat>(3);
     cv::split(float_img, chw);
-    std::vector<float> input_tensor(input_width * input_height * 3);
-    size_t channel_size = input_width * input_height;
+    auto input_tensor = std::vector<float>(input_width * input_height * 3);
+    auto channel_size = input_width * input_height;
     
     for (int c = 0; c < 3; ++c) {
         memcpy(input_tensor.data() + c * channel_size, chw[c].data, channel_size * sizeof(float));

@@ -12,10 +12,10 @@ YOLOv8::YOLOv8(const std::string& model_path, float conf_thres, float iou_thres)
 
 std::vector<Detection> YOLOv8::detect_objects(const cv::Mat& image) {
     // 1. Preprocess image
-    std::vector<float> input_tensor = preprocessor->prepare_input(image);
+    auto input_tensor = preprocessor->prepare_input(image);
     
     // 2. Run inference
-    std::vector<Ort::Value> outputs = model->run_inference(input_tensor);
+    auto outputs = model->run_inference(input_tensor);
     
     // 3. Postprocess results
     auto detections = postprocessor->process_output(outputs, image.size());
@@ -41,13 +41,13 @@ std::vector<Detection> YOLOv8::detect_objects_fov(const cv::Mat& fov_image) {
     }
     
     // Detect objects in FOV
-    std::vector<Detection> detections = detect_objects(fov_image);
+    auto detections = detect_objects(fov_image);
     
     // Process FOV-specific calculations
     return fov_processor->process_fov_detections(detections);
 }
 
 cv::Mat YOLOv8::draw_fov_detections(const cv::Mat& fov_image, const std::vector<Detection>& detections) {
-    cv::Size fov_size = fov_processor->get_fov_size();
+    auto fov_size = fov_processor->get_fov_size();
     return visualizer->draw_fov_detections(fov_image, detections, fov_size.width, fov_size.height);
 } 

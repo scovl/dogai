@@ -22,27 +22,27 @@ cv::Point WindowsGraphicsCapture::get_screen_center() const {
 }
 
 cv::Rect WindowsGraphicsCapture::calculate_fov_region(int fov_width, int fov_height) {
-    cv::Point center = get_screen_center();
-    int x = center.x - fov_width / 2;
-    int y = center.y - fov_height / 2;
+    auto center = get_screen_center();
+    auto x = center.x - fov_width / 2;
+    auto y = center.y - fov_height / 2;
     
     // Ensure FOV doesn't go outside screen bounds
     x = (x > 0) ? x : 0;
     y = (y > 0) ? y : 0;
     
-    int actual_width = (fov_width < (screen_size.width - x)) ? fov_width : (screen_size.width - x);
-    int actual_height = (fov_height < (screen_size.height - y)) ? fov_height : (screen_size.height - y);
+    auto actual_width = (fov_width < (screen_size.width - x)) ? fov_width : (screen_size.width - x);
+    auto actual_height = (fov_height < (screen_size.height - y)) ? fov_height : (screen_size.height - y);
     
     return cv::Rect(x, y, actual_width, actual_height);
 }
 
 cv::Mat WindowsGraphicsCapture::capture_fov(int fov_width, int fov_height) {
-    cv::Mat full_screen = capture_screen();
+    auto full_screen = capture_screen();
     if (full_screen.empty()) {
         return cv::Mat();
     }
     
-    cv::Rect fov_region = calculate_fov_region(fov_width, fov_height);
+    auto fov_region = calculate_fov_region(fov_width, fov_height);
     return full_screen(fov_region);
 }
 
@@ -52,11 +52,11 @@ cv::Mat WindowsGraphicsCapture::capture_screen() {
         return cv::Mat();
     }
     
-    IDXGIResource* desktop_resource = nullptr;
-    DXGI_OUTDUPL_FRAME_INFO frame_info;
+    auto desktop_resource = static_cast<IDXGIResource*>(nullptr);
+    auto frame_info = DXGI_OUTDUPL_FRAME_INFO();
     
     // Try multiple times with increasing timeout
-    HRESULT hr = S_OK;
+    auto hr = S_OK;
     for (int attempt = 0; attempt < 3; ++attempt) {
         hr = desktop_duplication->AcquireNextFrame(500, &frame_info, &desktop_resource);
         if (SUCCEEDED(hr)) {
@@ -67,6 +67,17 @@ cv::Mat WindowsGraphicsCapture::capture_screen() {
         if (hr == DXGI_ERROR_WAIT_TIMEOUT) {
             Sleep(50); // Wait 50ms before retry
             continue;
+        }
+        
+        // Handle access lost error - try to reinitialize
+        if (hr == DXGI_ERROR_ACCESS_LOST_ERROR) {
+            logger.warning("[WGC][WARNING] Desktop duplication access lost, attempting to reinitialize...");
+            if (reinitialize_capture()) {
+                continue; // Try again with new duplication
+            } else {
+                logger.error("[WGC][ERROR] Failed to reinitialize desktop duplication");
+                return cv::Mat();
+            }
         }
         
         // For other errors, log and return
@@ -199,6 +210,15 @@ bool WindowsGraphicsCapture::initialize_d3d() {
     }
     
     initialized = true;
+    
+    // Check if we have proper permissions
+    if (!check_permissions()) {
+        logger.error("[WGC][ERROR] Insufficient permissions for screen capture!");
+        logger.error("[WGC][ERROR] Please run as administrator or check Windows privacy settings");
+        cleanup();
+        return false;
+    }
+    
     return true;
 }
 
@@ -230,5 +250,50 @@ void WindowsGraphicsCapture::cleanup() {
     if (d3d_device) {
         d3d_device->Release();
         d3d_device = nullptr;
+    }
+}
+
+bool WindowsGraphicsCapture::check_permissions() {
+    // Check if running with administrator privileges
+    BOOL is_admin = FALSE;
+    PSID admin_group = nullptr;
+    SID_IDENTIFIER_AUTHORITY nt_authority = SECURITY_NT_AUTHORITY;
+    
+    if (AllocateAndInitializeSid(&nt_authority, 2, SECURITY_BUILTIN_DOMAIN_RID,
+        DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0, &admin_group)) {
+        CheckTokenMembership(nullptr, admin_group, &is_admin);
+        FreeSid(admin_group);
+    }
+    
+    if (!is_admin) {
+        logger.warning("[WGC][WARNING] Not running as administrator - screen capture may fail");
+        logger.warning("[WGC][WARNING] Consider running as administrator for better compatibility");
+    }
+    
+    // Check if desktop duplication is working
+    if (!desktop_duplication) {
+        logger.error("[WGC][ERROR] Desktop duplication not initialized");
+        return false;
+    }
+    
+    return true;
+}
+
+bool WindowsGraphicsCapture::reinitialize_capture() {
+    logger.info("[WGC][INFO] Attempting to reinitialize screen capture...");
+    
+    // Clean up existing resources
+    cleanup();
+    
+    // Wait a bit before reinitializing
+    Sleep(200);
+    
+    // Try to reinitialize
+    if (initialize_d3d()) {
+        logger.info("[WGC][INFO] Successfully reinitialized screen capture");
+        return true;
+    } else {
+        logger.error("[WGC][ERROR] Failed to reinitialize screen capture");
+        return false;
     }
 } 

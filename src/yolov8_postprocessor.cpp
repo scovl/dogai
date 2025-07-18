@@ -17,15 +17,15 @@ void YOLOv8Postprocessor::set_input_size(int width, int height) {
 }
 
 std::vector<Detection> YOLOv8Postprocessor::process_output(const std::vector<Ort::Value>& outputs, const cv::Size& original_size) {
-    std::vector<Detection> detections;
+    auto detections = std::vector<Detection>();
     if (outputs.empty()) {
         logger.error("[YOLOv8Postprocessor][ERROR] Model output is empty!");
         return detections;
     }
     
     // Get the first output tensor
-    const Ort::Value& output = outputs[0];
-    std::vector<int64_t> output_shape = output.GetTensorTypeAndShapeInfo().GetShape();
+    const auto& output = outputs[0];
+    auto output_shape = output.GetTensorTypeAndShapeInfo().GetShape();
 
     // Check expected shape
     if (output_shape.size() < 2) {
@@ -33,7 +33,7 @@ std::vector<Detection> YOLOv8Postprocessor::process_output(const std::vector<Ort
         return detections;
     }
     
-    float* output_data = nullptr;
+    auto output_data = static_cast<float*>(nullptr);
     try {
         output_data = const_cast<float*>(output.GetTensorData<float>());
     } catch (const std::exception& e) {
@@ -47,11 +47,11 @@ std::vector<Detection> YOLOv8Postprocessor::process_output(const std::vector<Ort
     
     // Suporte ao formato [1, 5, 8400] do blood.onnx
     if (output_shape.size() == 3 && output_shape[1] == 5) {
-        int num_boxes = static_cast<int>(output_shape[2]);
-        int img_width = original_size.width;
-        int img_height = original_size.height;
-        int input_w = input_width;
-        int input_h = input_height;
+        auto num_boxes = static_cast<int>(output_shape[2]);
+        auto img_width = original_size.width;
+        auto img_height = original_size.height;
+        auto input_w = input_width;
+        auto input_h = input_height;
 
         for (int i = 0; i < num_boxes; ++i) {
             float x = output_data[0 * num_boxes + i];
