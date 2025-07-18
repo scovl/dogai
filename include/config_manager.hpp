@@ -13,7 +13,7 @@ private:
     std::string config_file;
     
 public:
-    ConfigManager(const std::string& filename = "models/blood.cfg") : config_file(filename) {
+    ConfigManager(const std::string& filename = "blood.cfg") : config_file(filename) {
         load_config();
     }
     
