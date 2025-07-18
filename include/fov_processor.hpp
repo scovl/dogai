@@ -3,6 +3,7 @@
 #include "yolov8_postprocessor.hpp"
 #include <opencv2/opencv.hpp>
 #include <vector>
+#include <cmath>
 
 class FOVProcessor {
 private:
